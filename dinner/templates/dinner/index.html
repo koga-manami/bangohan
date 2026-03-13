@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>ばんごはん</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- フォント読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
     <style>
         /* セーフエリア対応 */
         :root {
@@ -30,14 +34,14 @@
 
     <!-- ヘッダー -->
     <header class="sticky-header sticky z-50 text-white text-center py-3" style="background-color: #555555;">
-        <h1 class="text-xl font-bold tracking-wide" style="font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;">
+        <h1 class="text-2xl tracking-wide" style="font-family: 'HGS創英角ｺﾞｼｯｸUB', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif; font-weight: 900;">
             ばんごはん 🍚
         </h1>
     </header>
 
     <!-- メモエリア -->
     <div class="px-3 py-2">
-        <div class="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base">
+        <div class="bg-white border border-gray-300 rounded-xl px-4 py-6 text-base min-h-[60px]">
             {{ ingredients|default:"" }}
         </div>
     </div>
@@ -49,7 +53,7 @@
                 {% for day in days %}
                 <tr class="border border-gray-300">
                     <td class="border border-gray-300 px-2 py-2 whitespace-nowrap font-bold"
-                        style="color: {{ day.color }}; min-width: 80px;">
+                        style="color: {{ day.color }}; min-width: 80px; font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', sans-serif;">
                         {{ day.date_label }}
                     </td>
                     <td class="border border-gray-300 px-2 py-2" style="min-width: 80px;">
