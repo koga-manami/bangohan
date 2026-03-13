@@ -1,0 +1,101 @@
+openapi: 3.0.3
+info:
+  title: ばんごはん API
+  description: 献立管理アプリ「ばんごはん」の内部データ操作用API仕様書
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: Django 内部エンドポイント
+
+paths:
+  /ingredients/update/:
+    post:
+      summary: 自由入力メモ（残りの食材）の更新
+      description: ingredientsテーブルの唯一のレコードを更新、または作成します。
+      operationId: updateIngredients
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ingredients:
+                  type: string
+                  maxLength: 256
+                  example: "鮭1、とりもも2."
+      responses:
+        '200':
+          description: 更新成功
+        '400':
+          description: バリデーションエラー
+
+  /dinner/save/:
+    post:
+      summary: 献立・用事の登録と更新
+      description: 指定された日付のdinnerレコードを更新、存在しない場合は新規作成します。
+      operationId: saveDinner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - date
+              properties:
+                date:
+                  type: string
+                  format: date
+                  description: 更新対象の日付 (YYYY-MM-DD)
+                event:
+                  type: string
+                  maxLength: 50
+                  example: "買い物"
+                kondate:
+                  type: string
+                  maxLength: 256
+                  example: "しそかつ"
+      responses:
+        '200':
+          description: 保存成功
+        '400':
+          description: データ不正
+
+components:
+  schemas:
+    DinnerEntry:
+      type: object
+      properties:
+        dinner_id:
+          type: integer
+        date:
+          type: string
+          format: date
+        event:
+          type: string
+        kondate:
+          type: string
+        is_holiday:
+          type: boolean
+          description: 日本の祝日の場合 true (サーバーサイド判定)
+        color_type:
+          type: string
+          enum: [black, blue, red]
+          description: UI表示用の色判定結果
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IngredientsEntry:
+      type: object
+      properties:
+        ingredients:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
