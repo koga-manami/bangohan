@@ -1,6 +1,9 @@
 import datetime
+import json
 
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.http import require_POST
 
 from .models import Dinner, Ingredients
 from .utils import get_color_type, is_japanese_holiday
@@ -46,3 +49,44 @@ def index(request):
         "today": today,
     }
     return render(request, "dinner/index.html", context)
+
+
+@require_POST
+def save_dinner(request):
+    """献立・用事の保存API"""
+    try:
+        data = json.loads(request.body)
+        date_str = data.get("date")
+        event = data.get("event", "")
+        kondate = data.get("kondate", "")
+
+        if not date_str:
+            return JsonResponse({"status": "error", "message": "date is required"}, status=400)
+
+        target_date = datetime.date.fromisoformat(date_str)
+        dinner, _created = Dinner.objects.update_or_create(
+            date=target_date,
+            defaults={"event": event, "kondate": kondate},
+        )
+        return JsonResponse({"status": "ok", "updated_at": str(dinner.updated_at)})
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+
+@require_POST
+def update_ingredients(request):
+    """食材メモの更新API"""
+    try:
+        data = json.loads(request.body)
+        ingredients_text = data.get("ingredients", "")
+
+        obj = Ingredients.objects.first()
+        if obj:
+            obj.ingredients = ingredients_text
+            obj.save()
+        else:
+            obj = Ingredients.objects.create(ingredients=ingredients_text)
+
+        return JsonResponse({"status": "ok", "updated_at": str(obj.updated_at)})
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)

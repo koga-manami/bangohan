@@ -28,6 +28,17 @@
         .sticky-header {
             top: var(--sat);
         }
+        /* 編集可能セルのフォーカススタイル */
+        td[contenteditable="true"]:focus {
+            outline: 2px solid #3B82F6;
+            outline-offset: -2px;
+            background-color: #EFF6FF;
+        }
+        .memo-area:focus {
+            outline: 2px solid #3B82F6;
+            outline-offset: -2px;
+            background-color: #EFF6FF;
+        }
     </style>
 </head>
 <body class="bg-white min-h-screen">
@@ -39,34 +50,99 @@
         </h1>
     </header>
 
-    <!-- メモエリア -->
+    <!-- メモエリア（タップで編集可能） -->
     <div class="px-3 py-2">
-        <div class="bg-white border border-gray-300 rounded-xl px-4 py-6 text-base min-h-[60px]">
-            {{ ingredients|default:"" }}
-        </div>
+        <div class="memo-area bg-white border border-gray-300 rounded-xl px-4 py-6 text-base min-h-[60px]"
+             contenteditable="true"
+             id="ingredients-memo"
+        >{{ ingredients|default:"" }}</div>
     </div>
 
     <!-- 献立リスト -->
     <div class="px-3 pb-8">
-        <table class="w-full border-collapse border border-gray-400 text-sm">
+        <table class="w-full border-collapse border border-gray-400 text-sm table-fixed">
+            <colgroup>
+                <col style="width: 72px;">
+                <col style="width: 72px;">
+                <col>
+            </colgroup>
             <tbody>
                 {% for day in days %}
                 <tr class="border border-gray-300">
                     <td class="border border-gray-300 px-2 py-2 whitespace-nowrap font-bold"
-                        style="color: {{ day.color }}; min-width: 80px; font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', sans-serif;">
+                        style="color: {{ day.color }}; font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', sans-serif;">
                         {{ day.date_label }}
                     </td>
-                    <td class="border border-gray-300 px-2 py-2" style="min-width: 80px;">
-                        {{ day.event }}
-                    </td>
-                    <td class="border border-gray-300 px-2 py-2">
-                        {{ day.kondate }}
-                    </td>
+                    <td class="border border-gray-300 px-2 py-2"
+                        contenteditable="true"
+                        data-date="{{ day.date|date:'Y-m-d' }}"
+                        data-field="event"
+                    >{{ day.event }}</td>
+                    <td class="border border-gray-300 px-2 py-2"
+                        contenteditable="true"
+                        data-date="{{ day.date|date:'Y-m-d' }}"
+                        data-field="kondate"
+                    >{{ day.kondate }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    {% csrf_token %}
+    <script>
+    // CSRF トークン取得
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // 献立セルの保存（フォーカスが外れたとき）
+    const dinnerCells = document.querySelectorAll('td[contenteditable="true"][data-date]');
+    const saveTimers = {};
+
+    dinnerCells.forEach(cell => {
+        cell.addEventListener('blur', function() {
+            const dateStr = this.dataset.date;
+            const eventCell = document.querySelector('td[data-date="' + dateStr + '"][data-field="event"]');
+            const kondateCell = document.querySelector('td[data-date="' + dateStr + '"][data-field="kondate"]');
+
+            const payload = {
+                date: dateStr,
+                event: eventCell ? eventCell.textContent.trim() : '',
+                kondate: kondateCell ? kondateCell.textContent.trim() : '',
+            };
+
+            clearTimeout(saveTimers[dateStr]);
+            saveTimers[dateStr] = setTimeout(() => {
+                fetch('/api/dinner/save/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify(payload),
+                });
+            }, 300);
+        });
+    });
+
+    // メモエリアの保存（フォーカスが外れたとき）
+    const memoArea = document.getElementById('ingredients-memo');
+    let memoTimer = null;
+
+    memoArea.addEventListener('blur', function() {
+        const text = this.textContent.trim();
+        clearTimeout(memoTimer);
+        memoTimer = setTimeout(() => {
+            fetch('/api/ingredients/update/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ ingredients: text }),
+            });
+        }, 300);
+    });
+    </script>
 
 </body>
 </html>
