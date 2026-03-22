@@ -143,10 +143,14 @@
         }, 300);
     });
 
-    // 初期表示時に当日の行までスクロール
+    // 初期表示時に当日の行までスクロール（ヘッダー+メモエリア分オフセット）
     const todayRow = document.getElementById('today-row');
     if (todayRow) {
-        todayRow.scrollIntoView({ behavior: 'instant', block: 'start' });
+        const header = document.querySelector('header');
+        const memoWrapper = document.getElementById('memo-wrapper');
+        const offset = (header ? header.offsetHeight : 0) + (memoWrapper ? memoWrapper.offsetHeight : 0);
+        const rowTop = todayRow.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: rowTop - offset, behavior: 'instant' });
     }
     </script>
 
