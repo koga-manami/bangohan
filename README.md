@@ -1,78 +1,114 @@
-# ばんごはん
+# ばんごはん.com
 
-日々の献立やストック食材をシンプルに管理するための iPhone 専用アプリ。
+iPhone 向け献立管理アプリ（Next.js + Neon + Vercel 構成）
 
-## 技術スタック
+## 技術構成
 
-- Python 3.x
-- Django 5.2 (LTS)
-- SQLite (Django 標準)
-- Tailwind CSS (フロントエンド - 今後導入予定)
-- holidays ライブラリ (日本の祝日判定)
+- **フレームワーク**: Next.js 14 (App Router)
+- **言語**: TypeScript
+- **スタイル**: TailwindCSS
+- **DB**: Neon PostgreSQL
+- **ORM**: Prisma
+- **デプロイ**: Vercel
+- **PWA**: Service Worker + manifest.json
 
-## ローカル環境構築手順
+## ローカル環境構築
 
-### 1. リポジトリのクローン
+### 前提条件
+
+- Node.js 18 以上
+- npm
+- Neon アカウント（PostgreSQL）
+
+### セットアップ手順
 
 ```bash
+# 1. リポジトリをクローン
 git clone https://github.com/koga-manami/bangohan.git
 cd bangohan
+
+# 2. 依存パッケージのインストール
+npm install
+
+# 3. 環境変数の設定
+cp .env.local.example .env.local
+# .env.local を編集して DATABASE_URL を設定
+
+# 4. Prisma マイグレーション実行
+npx prisma migrate dev --name init
+
+# 5. 開発サーバー起動
+npm run dev
 ```
 
-### 2. Python 仮想環境の作成・有効化
+ブラウザで http://localhost:3000 にアクセスしてください。
+
+## Neon 設定方法
+
+1. [Neon Console](https://console.neon.tech/) にアクセス
+2. 新しいプロジェクトを作成
+3. ダッシュボードから接続文字列（Connection string）をコピー
+4. `.env.local` の `DATABASE_URL` にペースト
+
+```
+DATABASE_URL="postgresql://username:password@ep-xxxx.region.aws.neon.tech/bangohan?sslmode=require"
+```
+
+## Vercel デプロイ手順
+
+1. [Vercel](https://vercel.com) にログイン
+2. 「New Project」→ GitHub リポジトリを選択
+3. 環境変数に `DATABASE_URL` を設定（Neon の接続文字列）
+4. デプロイ実行
+
+### ビルドコマンド（自動設定）
+
+```
+prisma generate && next build
+```
+
+### Prisma マイグレーション（初回のみ）
+
+Vercel デプロイ後、ローカルから以下を実行：
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+DATABASE_URL="your-neon-url" npx prisma migrate deploy
 ```
 
-### 3. 依存パッケージのインストール
+## 機能
 
-```bash
-pip install -r requirements.txt
-```
+- 今日から1ヶ月先までの献立一覧表示
+- 各日の「献立」「予定」をタップ編集 → 自動保存
+- 上部に材料メモ欄（編集可能・sticky固定）
+- 今日の行を自動ハイライト・スクロール
+- 色分け（平日=黒、土曜=青、日曜・祝日=赤）
+- PWA 対応（ホーム画面追加可能）
+- iPhone Safari 最適化
 
-### 4. マイグレーションの実行
+## DB構造
 
-```bash
-python manage.py migrate
-```
+### MealPlan（献立）
 
-### 5. 管理ユーザーの作成
+| カラム | 型 | 説明 |
+|--------|------|------|
+| id | Int | 主キー |
+| date | Date | 日付（unique） |
+| menu_text | String? | 献立テキスト |
+| schedule_text | String? | 予定テキスト |
+| created_at | DateTime | 作成日時 |
+| updated_at | DateTime | 更新日時 |
 
-```bash
-python manage.py createsuperuser
-```
+### IngredientsMemo（材料メモ）
 
-### 6. 開発サーバーの起動
-
-```bash
-python manage.py runserver
-```
-
-ブラウザで http://127.0.0.1:8000/admin/ にアクセスし、作成した管理ユーザーでログインしてください。
-
-## プロジェクト構成
-
-```
-bangohan/
-├── config/          # Django プロジェクト設定
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── dinner/          # メインアプリケーション
-│   ├── admin.py     # 管理画面設定
-│   ├── models.py    # DB モデル (Dinner, Ingredients)
-│   ├── utils.py     # ユーティリティ (祝日判定など)
-│   └── migrations/
-├── docs/            # 仕様書・設計ドキュメント
-├── manage.py
-├── requirements.txt
-└── README.md
-```
+| カラム | 型 | 説明 |
+|--------|------|------|
+| id | Int | 主キー |
+| memo_text | String? | メモテキスト |
+| created_at | DateTime | 作成日時 |
+| updated_at | DateTime | 更新日時 |
 
 ## ブランチ運用
 
 - `main` : 本番
-- `dev` : 開発
-- `feature/*` : 作業ブランチ (dev から作成し、PR は dev 宛に出す)
+- `develop` : 開発
+- `feature/*` : 作業ブランチ (develop から作成し、PR は develop 宛に出す)
