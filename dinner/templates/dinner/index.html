@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ばんごはん.com</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- フォント読み込み -->
@@ -50,8 +50,8 @@
         </h1>
     </header>
 
-    <!-- メモエリア（タップで編集可能） -->
-    <div class="px-3 py-2">
+    <!-- メモエリア（sticky固定・タップで編集可能） -->
+    <div class="sticky z-40 bg-white px-3 py-2" id="memo-wrapper" style="top: calc(var(--sat) + 48px);">
         <div class="memo-area bg-white border border-gray-300 rounded-xl px-4 py-6 text-base min-h-[60px]"
              contenteditable="true"
              id="ingredients-memo"
@@ -59,7 +59,7 @@
     </div>
 
     <!-- 献立リスト -->
-    <div class="px-3 pb-8">
+    <div class="px-3 pb-8" id="dinner-list">
         <table class="w-full border-collapse border border-gray-400 text-sm table-fixed">
             <colgroup>
                 <col style="width: 72px;">
@@ -68,8 +68,8 @@
             </colgroup>
             <tbody>
                 {% for day in days %}
-                <tr class="border border-gray-300">
-                    <td class="border border-gray-300 px-2 py-2 whitespace-nowrap font-bold"
+                <tr class="border border-gray-300" {% if day.date == today %}id="today-row"{% endif %}>
+                    <td class="border border-gray-300 px-2 py-2 whitespace-nowrap text-center"
                         style="color: {{ day.color }}; font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', sans-serif;">
                         {{ day.date_label }}
                     </td>
@@ -142,6 +142,12 @@
             });
         }, 300);
     });
+
+    // 初期表示時に当日の行までスクロール
+    const todayRow = document.getElementById('today-row');
+    if (todayRow) {
+        todayRow.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }
     </script>
 
 </body>
