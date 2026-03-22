@@ -13,10 +13,12 @@ WEEKDAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"]
 
 
 def index(request):
-    """メイン画面: 当日を基準に前後2週間の献立リストを表示する。"""
+    """メイン画面: 当日を基準に1週間前〜1ヶ月先の献立リストを表示する。"""
     today = datetime.date.today()
-    start_date = today
-    end_date = today + datetime.timedelta(days=14)
+    # 1週間前から（過去データがあれば上スクロールで見える）
+    start_date = today - datetime.timedelta(days=7)
+    # 1ヶ月先まで表示
+    end_date = today + datetime.timedelta(days=30)
 
     # 期間内の既存レコードを取得して辞書化
     existing = Dinner.objects.filter(date__gte=start_date, date__lte=end_date)
