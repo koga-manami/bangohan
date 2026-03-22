@@ -68,7 +68,8 @@
             </colgroup>
             <tbody>
                 {% for day in days %}
-                <tr class="border border-gray-300">
+                <tr class="border border-gray-300"
+                    {% if day.date == today %}id="today-row"{% endif %}>
                     <td class="border border-gray-300 px-2 py-2 whitespace-nowrap text-center"
                         style="color: {{ day.color }}; font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', sans-serif;">
                         {{ day.date_label }}
