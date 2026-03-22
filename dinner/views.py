@@ -13,10 +13,9 @@ WEEKDAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"]
 
 
 def index(request):
-    """メイン画面: 当日を基準に1週間前〜1ヶ月先の献立リストを表示する。"""
+    """メイン画面: 当日から1ヶ月先の献立リストを表示する。"""
     today = datetime.date.today()
-    # 1週間前から（過去データがあれば上スクロールで見える）
-    start_date = today - datetime.timedelta(days=7)
+    start_date = today
     # 1ヶ月先まで表示
     end_date = today + datetime.timedelta(days=30)
 
