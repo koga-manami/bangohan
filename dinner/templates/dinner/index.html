@@ -51,7 +51,7 @@
     </header>
 
     <!-- メモエリア（sticky固定・タップで編集可能） -->
-    <div class="sticky z-40 bg-white px-3 py-2" id="memo-wrapper" style="top: calc(var(--sat) + 48px);">
+    <div class="sticky z-40 bg-white px-3 py-4" id="memo-wrapper" style="top: calc(var(--sat) + 48px);">
         <div class="memo-area bg-white border border-gray-300 rounded-xl px-4 py-6 text-base min-h-[60px]"
              contenteditable="true"
              id="ingredients-memo"
@@ -68,7 +68,7 @@
             </colgroup>
             <tbody>
                 {% for day in days %}
-                <tr class="border border-gray-300" {% if day.date == today %}id="today-row"{% endif %}>
+                <tr class="border border-gray-300">
                     <td class="border border-gray-300 px-2 py-2 whitespace-nowrap text-center"
                         style="color: {{ day.color }}; font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', sans-serif;">
                         {{ day.date_label }}
@@ -145,18 +145,6 @@
             }, 300);
         });
 
-        // 初期表示時に当日の行までスクロール（ヘッダー+メモエリア分オフセット）
-        const todayRow = document.getElementById("today-row");
-        if (!todayRow) return;
-
-        const headerOffset = 120;
-        const elementPosition = todayRow.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-        window.scrollTo({
-            top: offsetPosition,
-            behavior: "auto"
-        });
     });
     </script>
 
