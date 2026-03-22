@@ -91,67 +91,73 @@
 
     {% csrf_token %}
     <script>
-    // CSRF トークン取得
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    document.addEventListener("DOMContentLoaded", function() {
+        // CSRF トークン取得
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    // 献立セルの保存（フォーカスが外れたとき）
-    const dinnerCells = document.querySelectorAll('td[contenteditable="true"][data-date]');
-    const saveTimers = {};
+        // 献立セルの保存（フォーカスが外れたとき）
+        const dinnerCells = document.querySelectorAll('td[contenteditable="true"][data-date]');
+        const saveTimers = {};
 
-    dinnerCells.forEach(cell => {
-        cell.addEventListener('blur', function() {
-            const dateStr = this.dataset.date;
-            const eventCell = document.querySelector('td[data-date="' + dateStr + '"][data-field="event"]');
-            const kondateCell = document.querySelector('td[data-date="' + dateStr + '"][data-field="kondate"]');
+        dinnerCells.forEach(cell => {
+            cell.addEventListener('blur', function() {
+                const dateStr = this.dataset.date;
+                const eventCell = document.querySelector('td[data-date="' + dateStr + '"][data-field="event"]');
+                const kondateCell = document.querySelector('td[data-date="' + dateStr + '"][data-field="kondate"]');
 
-            const payload = {
-                date: dateStr,
-                event: eventCell ? eventCell.textContent.trim() : '',
-                kondate: kondateCell ? kondateCell.textContent.trim() : '',
-            };
+                const payload = {
+                    date: dateStr,
+                    event: eventCell ? eventCell.textContent.trim() : '',
+                    kondate: kondateCell ? kondateCell.textContent.trim() : '',
+                };
 
-            clearTimeout(saveTimers[dateStr]);
-            saveTimers[dateStr] = setTimeout(() => {
-                fetch('/api/dinner/save/', {
+                clearTimeout(saveTimers[dateStr]);
+                saveTimers[dateStr] = setTimeout(() => {
+                    fetch('/api/dinner/save/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                }, 300);
+            });
+        });
+
+        // メモエリアの保存（フォーカスが外れたとき）
+        const memoArea = document.getElementById('ingredients-memo');
+        if (!memoArea) return;
+        let memoTimer = null;
+
+        memoArea.addEventListener('blur', function() {
+            const text = this.textContent.trim();
+            clearTimeout(memoTimer);
+            memoTimer = setTimeout(() => {
+                fetch('/api/ingredients/update/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrfToken,
                     },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify({ ingredients: text }),
                 });
             }, 300);
         });
+
+        // 初期表示時に当日の行までスクロール（ヘッダー+メモエリア分オフセット）
+        const todayRow = document.getElementById("today-row");
+        if (!todayRow) return;
+
+        const headerOffset = 120;
+        const elementPosition = todayRow.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: "auto"
+        });
     });
-
-    // メモエリアの保存（フォーカスが外れたとき）
-    const memoArea = document.getElementById('ingredients-memo');
-    let memoTimer = null;
-
-    memoArea.addEventListener('blur', function() {
-        const text = this.textContent.trim();
-        clearTimeout(memoTimer);
-        memoTimer = setTimeout(() => {
-            fetch('/api/ingredients/update/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify({ ingredients: text }),
-            });
-        }, 300);
-    });
-
-    // 初期表示時に当日の行までスクロール（ヘッダー+メモエリア分オフセット）
-    const todayRow = document.getElementById('today-row');
-    if (todayRow) {
-        const header = document.querySelector('header');
-        const memoWrapper = document.getElementById('memo-wrapper');
-        const offset = (header ? header.offsetHeight : 0) + (memoWrapper ? memoWrapper.offsetHeight : 0);
-        const rowTop = todayRow.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({ top: rowTop - offset, behavior: 'instant' });
-    }
     </script>
 
 </body>
