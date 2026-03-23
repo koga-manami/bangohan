@@ -21,7 +21,6 @@ interface MealPlanRecord {
 export default function Home() {
   const [days, setDays] = useState<DayData[]>([]);
   const [memoText, setMemoText] = useState("");
-  const [isLoaded, setIsLoaded] = useState(false);
   const memoRef = useRef<HTMLDivElement>(null);
   const memoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -78,27 +77,10 @@ export default function Home() {
 
       setDays(generateDays(mealPlans));
       setMemoText(memo.memo_text ?? "");
-      setIsLoaded(true);
     }
 
     fetchData();
   }, [generateDays]);
-
-  // 今日の行までスクロール
-  useEffect(() => {
-    if (!isLoaded) return;
-    const todayRow = document.getElementById("today-row");
-    if (!todayRow) return;
-
-    const headerOffset = 120;
-    const elementPosition = todayRow.getBoundingClientRect().top;
-    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: "auto",
-    });
-  }, [isLoaded]);
 
   // メモ保存
   const saveMemo = useCallback((text: string) => {
