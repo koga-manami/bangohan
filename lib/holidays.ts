@@ -32,10 +32,11 @@ const HAPPY_MONDAY_HOLIDAYS: { month: number; weekOfMonth: number }[] = [
 ];
 
 function getNthMondayOfMonth(year: number, month: number, n: number): number {
-  const firstDay = new Date(year, month - 1, 1);
-  const firstMonday = firstDay.getDay() <= 1
-    ? 1 + (1 - firstDay.getDay())
-    : 1 + (8 - firstDay.getDay());
+  const firstDay = new Date(Date.UTC(year, month - 1, 1));
+  const dow = firstDay.getUTCDay();
+  const firstMonday = dow <= 1
+    ? 1 + (1 - dow)
+    : 1 + (8 - dow);
   return firstMonday + (n - 1) * 7;
 }
 
@@ -50,10 +51,10 @@ function getAutumnalEquinoxDay(year: number): number {
 }
 
 export function isJapaneseHoliday(date: Date): boolean {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const dayOfWeek = date.getDay(); // 0=Sun
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  const dayOfWeek = date.getUTCDay(); // 0=Sun
 
   // 固定祝日チェック
   for (const h of FIXED_HOLIDAYS) {
@@ -76,8 +77,8 @@ export function isJapaneseHoliday(date: Date): boolean {
 
   // 振替休日（祝日が日曜の場合、翌月曜が振替休日）
   if (dayOfWeek === 1) { // 月曜日
-    const yesterday = new Date(year, month - 1, day - 1);
-    if (yesterday.getDay() === 0) { // 前日が日曜日
+    const yesterday = new Date(Date.UTC(year, month - 1, day - 1));
+    if (yesterday.getUTCDay() === 0) { // 前日が日曜日
       return isJapaneseHolidayCore(yesterday);
     }
   }
@@ -87,9 +88,9 @@ export function isJapaneseHoliday(date: Date): boolean {
 
 // 振替休日の再帰を避けるためのコア関数
 function isJapaneseHolidayCore(date: Date): boolean {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
 
   for (const h of FIXED_HOLIDAYS) {
     if (h.month === month && h.day === day) return true;
@@ -108,7 +109,7 @@ function isJapaneseHolidayCore(date: Date): boolean {
 
 /** 日付の色タイプを取得 */
 export function getColorType(date: Date): string {
-  const dayOfWeek = date.getDay();
+  const dayOfWeek = date.getUTCDay();
   if (dayOfWeek === 0 || isJapaneseHoliday(date)) return "red";
   if (dayOfWeek === 6) return "blue";
   return "black";
@@ -118,5 +119,5 @@ export function getColorType(date: Date): string {
 const WEEKDAY_NAMES = ["日", "月", "火", "水", "木", "金", "土"];
 
 export function getWeekdayName(date: Date): string {
-  return WEEKDAY_NAMES[date.getDay()];
+  return WEEKDAY_NAMES[date.getUTCDay()];
 }

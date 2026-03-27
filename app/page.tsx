@@ -1,18 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { getColorType } from "@/lib/holidays";
-import { formatDate, formatDateLabel } from "@/lib/date-utils";
+import { formatDate, formatDateLabel, getTodayJST } from "@/lib/date-utils";
 import MealPlanClient from "./components/MealPlanClient";
 import type { DayData } from "./components/MealPlanClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getTodayJST();
   const todayStr = formatDate(today);
 
-  const endDate = new Date(today);
-  endDate.setDate(today.getDate() + 30);
+  const endDate = new Date(today.getTime());
+  endDate.setUTCDate(today.getUTCDate() + 30);
 
   const [mealPlans, memo] = await Promise.all([
     prisma.mealPlan.findMany({
@@ -33,8 +32,8 @@ export default async function Home() {
 
   const days: DayData[] = [];
   for (let i = 0; i <= 30; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
+    const date = new Date(today.getTime());
+    date.setUTCDate(today.getUTCDate() + i);
     const dateStr = formatDate(date);
     const plan = planMap.get(dateStr);
 
