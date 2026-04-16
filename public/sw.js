@@ -1,4 +1,4 @@
-const CACHE_NAME = "bangohan-v1";
+const CACHE_NAME = "bangohan-v2";
 const urlsToCache = ["/"];
 
 self.addEventListener("install", (event) => {
@@ -28,10 +28,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // HTML ナビゲーション（ページ遷移）はネットワーク優先
+  // → 常に最新データを表示し、オフライン時のみキャッシュにフォールバック
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 静的アセット（JS, CSS, 画像など）はキャッシュ優先
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {
-        // バックグラウンドで更新
         fetch(event.request).then((freshResponse) => {
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, freshResponse);
