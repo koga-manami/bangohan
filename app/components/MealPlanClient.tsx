@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface DayData {
   date: string;
@@ -20,10 +20,68 @@ export default function MealPlanClient({
   initialDays,
   initialMemoText,
 }: MealPlanClientProps) {
+  const [days, setDays] = useState(initialDays);
+  const [memoText, setMemoText] = useState(initialMemoText);
   const memoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {}
   );
+  const memoRef = useRef<HTMLDivElement>(null);
+
+  // マウント時にAPIから最新データを取得して差分があれば更新
+  useEffect(() => {
+    const todayStr = initialDays.find((d) => d.isToday)?.date;
+    if (!todayStr) return;
+
+    const endDate = new Date(todayStr + "T00:00:00Z");
+    endDate.setUTCDate(endDate.getUTCDate() + 30);
+    const endStr = endDate.toISOString().slice(0, 10);
+
+    Promise.all([
+      fetch(`/api/meal-plan?from=${todayStr}&to=${endStr}`).then((r) =>
+        r.json()
+      ),
+      fetch("/api/ingredients-memo").then((r) => r.json()),
+    ])
+      .then(([plans, memo]) => {
+        // 献立データを更新
+        const planMap = new Map<
+          string,
+          { menu_text: string | null; schedule_text: string | null }
+        >();
+        for (const plan of plans) {
+          const d = new Date(plan.date);
+          const key = d.toISOString().slice(0, 10);
+          planMap.set(key, plan);
+        }
+
+        setDays((prev) =>
+          prev.map((day) => {
+            const plan = planMap.get(day.date);
+            const newMenu = plan?.menu_text ?? "";
+            const newSchedule = plan?.schedule_text ?? "";
+            if (day.menuText === newMenu && day.scheduleText === newSchedule) {
+              return day;
+            }
+            return { ...day, menuText: newMenu, scheduleText: newSchedule };
+          })
+        );
+
+        // メモを更新
+        const freshMemo = memo?.memo_text ?? "";
+        setMemoText((prev) => {
+          if (prev === freshMemo) return prev;
+          // contentEditable の中身も直接更新
+          if (memoRef.current) {
+            memoRef.current.textContent = freshMemo;
+          }
+          return freshMemo;
+        });
+      })
+      .catch(() => {
+        // オフライン時などはキャッシュデータのまま表示
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveMemo = useCallback((text: string) => {
     if (memoTimerRef.current) clearTimeout(memoTimerRef.current);
@@ -79,7 +137,8 @@ export default function MealPlanClient({
             const text = e.currentTarget.textContent?.trim() ?? "";
             saveMemo(text);
           }}
-          dangerouslySetInnerHTML={{ __html: initialMemoText }}
+          ref={memoRef}
+          dangerouslySetInnerHTML={{ __html: memoText }}
         />
       </div>
 
@@ -92,7 +151,7 @@ export default function MealPlanClient({
             <col />
           </colgroup>
           <tbody>
-            {initialDays.map((day) => (
+            {days.map((day) => (
               <tr
                 key={day.date}
                 className="border border-gray-300"
@@ -114,6 +173,7 @@ export default function MealPlanClient({
                   {day.dateLabel}
                 </td>
                 <td
+                  key={`${day.date}-s-${day.scheduleText}`}
                   className="border border-gray-300 px-2 py-2"
                   contentEditable
                   suppressContentEditableWarning
@@ -127,6 +187,7 @@ export default function MealPlanClient({
                   dangerouslySetInnerHTML={{ __html: day.scheduleText }}
                 />
                 <td
+                  key={`${day.date}-m-${day.menuText}`}
                   className="border border-gray-300 px-2 py-2"
                   contentEditable
                   suppressContentEditableWarning
