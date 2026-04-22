@@ -157,7 +157,7 @@ export default function MealPlanClient() {
   // ローディング中はプログレスバーを表示
   if (days === null || memoText === null) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 pt-24 pb-12">
+      <div className="flex flex-col items-center justify-center px-6" style={{ minHeight: "calc(100vh - 48px - var(--sat))" }}>
         <div className="w-full max-w-xs">
           {/* プログレスバー */}
           <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
