@@ -29,3 +29,13 @@ td[contenteditable="true"]:focus {
   outline-offset: -2px;
   background-color: #EFF6FF;
 }
+
+/* プログレスバーのシマーアニメーション */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

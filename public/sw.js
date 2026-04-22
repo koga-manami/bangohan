@@ -1,4 +1,4 @@
-const CACHE_NAME = "bangohan-v3";
+const CACHE_NAME = "bangohan-v4";
 const urlsToCache = ["/"];
 
 self.addEventListener("install", (event) => {
@@ -22,15 +22,30 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // API リクエストはキャッシュしない
+  // API リクエストはキャッシュしない（クライアント側で直接取得）
   if (event.request.url.includes("/api/")) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // すべてのリクエストでキャッシュ優先（Stale-While-Revalidate）
-  // → キャッシュがあれば即座に返し、バックグラウンドで最新版を取得
-  // → HTML（ナビゲーション）のデータ鮮度はクライアント側APIフェッチで補完
+  // HTML ナビゲーションはネットワーク優先
+  // → データはクライアント側APIフェッチで取得するため、HTMLシェルを最新化
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 静的アセット（JS, CSS, 画像など）はキャッシュ優先
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {
