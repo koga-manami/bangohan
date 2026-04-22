@@ -178,17 +178,6 @@ export default function MealPlanClient() {
               }}
             />
           </div>
-          {/* パーセント表示 */}
-          <div className="flex justify-between mt-2 text-xs text-gray-500 font-medium">
-            <span>0%</span>
-            <span
-              className="text-sm font-bold transition-all duration-300"
-              style={{ color: "#3B5BDB" }}
-            >
-              {progress}%
-            </span>
-            <span>100%</span>
-          </div>
           <p className="text-center text-gray-400 text-xs mt-4">
             データを読み込んでいます...
           </p>
