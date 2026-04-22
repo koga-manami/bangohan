@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getColorType } from "@/lib/holidays";
+import { formatDate, formatDateLabel, getTodayJST } from "@/lib/date-utils";
 
-export interface DayData {
+interface DayData {
   date: string;
   dateLabel: string;
   color: string;
@@ -11,77 +13,108 @@ export interface DayData {
   isToday: boolean;
 }
 
-interface MealPlanClientProps {
-  initialDays: DayData[];
-  initialMemoText: string;
-}
-
-export default function MealPlanClient({
-  initialDays,
-  initialMemoText,
-}: MealPlanClientProps) {
-  const [days, setDays] = useState(initialDays);
-  const [memoText, setMemoText] = useState(initialMemoText);
+export default function MealPlanClient() {
+  const [days, setDays] = useState<DayData[] | null>(null);
+  const [memoText, setMemoText] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
   const memoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {}
   );
   const memoRef = useRef<HTMLDivElement>(null);
 
-  // マウント時にAPIから最新データを取得して差分があれば更新
+  // マウント時にAPIからデータを取得（プログレスバー表示）
   useEffect(() => {
-    const todayStr = initialDays.find((d) => d.isToday)?.date;
-    if (!todayStr) return;
+    const today = getTodayJST();
+    const todayStr = formatDate(today);
+    const endDate = new Date(today.getTime());
+    endDate.setUTCDate(today.getUTCDate() + 30);
+    const endStr = formatDate(endDate);
 
-    const endDate = new Date(todayStr + "T00:00:00Z");
-    endDate.setUTCDate(endDate.getUTCDate() + 30);
-    const endStr = endDate.toISOString().slice(0, 10);
+    // プログレスをアニメーション的に進める
+    setProgress(10);
+    let mealDone = false;
+    let memoDone = false;
 
-    Promise.all([
-      fetch(`/api/meal-plan?from=${todayStr}&to=${endStr}`).then((r) =>
-        r.json()
-      ),
-      fetch("/api/ingredients-memo").then((r) => r.json()),
-    ])
-      .then(([plans, memo]) => {
-        // 献立データを更新
-        const planMap = new Map<
-          string,
-          { menu_text: string | null; schedule_text: string | null }
-        >();
+    const updateProgress = () => {
+      const done = (mealDone ? 1 : 0) + (memoDone ? 1 : 0);
+      setProgress(10 + done * 40); // 10% → 50% → 90%
+    };
+
+    // 献立データ取得
+    const mealPromise = fetch(`/api/meal-plan?from=${todayStr}&to=${endStr}`)
+      .then((r) => r.json())
+      .then((plans: { date: string; menu_text: string | null; schedule_text: string | null }[]) => {
+        mealDone = true;
+        updateProgress();
+
+        const planMap = new Map<string, { menu_text: string | null; schedule_text: string | null }>();
         for (const plan of plans) {
           const d = new Date(plan.date);
           const key = d.toISOString().slice(0, 10);
           planMap.set(key, plan);
         }
 
-        setDays((prev) =>
-          prev.map((day) => {
-            const plan = planMap.get(day.date);
-            const newMenu = plan?.menu_text ?? "";
-            const newSchedule = plan?.schedule_text ?? "";
-            if (day.menuText === newMenu && day.scheduleText === newSchedule) {
-              return day;
-            }
-            return { ...day, menuText: newMenu, scheduleText: newSchedule };
-          })
-        );
+        const newDays: DayData[] = [];
+        for (let i = 0; i <= 30; i++) {
+          const date = new Date(today.getTime());
+          date.setUTCDate(today.getUTCDate() + i);
+          const dateStr = formatDate(date);
+          const plan = planMap.get(dateStr);
 
-        // メモを更新
-        const freshMemo = memo?.memo_text ?? "";
-        setMemoText((prev) => {
-          if (prev === freshMemo) return prev;
-          // contentEditable の中身も直接更新
-          if (memoRef.current) {
-            memoRef.current.textContent = freshMemo;
-          }
-          return freshMemo;
-        });
+          newDays.push({
+            date: dateStr,
+            dateLabel: formatDateLabel(date),
+            color: getColorType(date),
+            menuText: plan?.menu_text ?? "",
+            scheduleText: plan?.schedule_text ?? "",
+            isToday: dateStr === todayStr,
+          });
+        }
+        return newDays;
+      });
+
+    // メモデータ取得
+    const memoPromise = fetch("/api/ingredients-memo")
+      .then((r) => r.json())
+      .then((memo: { memo_text?: string }) => {
+        memoDone = true;
+        updateProgress();
+        return memo?.memo_text ?? "";
+      });
+
+    Promise.all([mealPromise, memoPromise])
+      .then(([newDays, freshMemo]) => {
+        setProgress(100);
+        // 少し待ってからデータを表示（プログレスバー100%の表示を見せる）
+        setTimeout(() => {
+          setDays(newDays);
+          setMemoText(freshMemo);
+        }, 200);
       })
       .catch(() => {
-        // オフライン時などはキャッシュデータのまま表示
+        // エラー時もプログレスを完了させて空のデータで表示
+        setProgress(100);
+        const emptyDays: DayData[] = [];
+        for (let i = 0; i <= 30; i++) {
+          const date = new Date(today.getTime());
+          date.setUTCDate(today.getUTCDate() + i);
+          const dateStr = formatDate(date);
+          emptyDays.push({
+            date: dateStr,
+            dateLabel: formatDateLabel(date),
+            color: getColorType(date),
+            menuText: "",
+            scheduleText: "",
+            isToday: dateStr === todayStr,
+          });
+        }
+        setTimeout(() => {
+          setDays(emptyDays);
+          setMemoText("");
+        }, 200);
       });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const saveMemo = useCallback((text: string) => {
     if (memoTimerRef.current) clearTimeout(memoTimerRef.current);
@@ -120,6 +153,49 @@ export default function MealPlanClient({
     },
     []
   );
+
+  // ローディング中はプログレスバーを表示
+  if (days === null || memoText === null) {
+    return (
+      <div className="flex flex-col items-center justify-center px-6 pt-24 pb-12">
+        <div className="w-full max-w-xs">
+          {/* プログレスバー */}
+          <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${progress}%`,
+                background: "linear-gradient(90deg, #3B5BDB, #5C7CFA, #748FFC)",
+              }}
+            />
+            {/* シマー（光沢）エフェクト */}
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)",
+                animation: "shimmer 1.5s infinite",
+              }}
+            />
+          </div>
+          {/* パーセント表示 */}
+          <div className="flex justify-between mt-2 text-xs text-gray-500 font-medium">
+            <span>0%</span>
+            <span
+              className="text-sm font-bold transition-all duration-300"
+              style={{ color: "#3B5BDB" }}
+            >
+              {progress}%
+            </span>
+            <span>100%</span>
+          </div>
+          <p className="text-center text-gray-400 text-xs mt-4">
+            データを読み込んでいます...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
