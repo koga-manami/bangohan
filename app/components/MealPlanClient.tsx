@@ -135,15 +135,23 @@ export default function MealPlanClient() {
     []
   );
 
-  // ローディング中はバウンスドットを表示
+  // ローディング中はスピナーを表示
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 48px - var(--sat))" }}>
-        <div className="flex gap-2">
-          <div className="bouncing-dot" style={{ animationDelay: "0s" }} />
-          <div className="bouncing-dot" style={{ animationDelay: "0.15s" }} />
-          <div className="bouncing-dot" style={{ animationDelay: "0.3s" }} />
+      <div className="flex flex-col items-center justify-center bg-white" style={{ minHeight: "calc(100vh - 48px - var(--sat))" }}>
+        <div className="spinner">
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className="spinner-bar"
+              style={{
+                transform: `rotate(${i * 30}deg) translateY(-130%)`,
+                animationDelay: `${-1.1 + i * 0.1}s`,
+              }}
+            />
+          ))}
         </div>
+        <p className="text-gray-400 text-xs mt-4">Now Loading...</p>
       </div>
     );
   }
