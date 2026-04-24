@@ -16,7 +16,7 @@ interface DayData {
 export default function MealPlanClient() {
   const [days, setDays] = useState<DayData[] | null>(null);
   const [memoText, setMemoText] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
   const memoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {}
@@ -31,22 +31,10 @@ export default function MealPlanClient() {
     endDate.setUTCDate(today.getUTCDate() + 30);
     const endStr = formatDate(endDate);
 
-    // プログレスをアニメーション的に進める
-    setProgress(10);
-    let mealDone = false;
-    let memoDone = false;
-
-    const updateProgress = () => {
-      const done = (mealDone ? 1 : 0) + (memoDone ? 1 : 0);
-      setProgress(10 + done * 40); // 10% → 50% → 90%
-    };
-
     // 献立データ取得
     const mealPromise = fetch(`/api/meal-plan?from=${todayStr}&to=${endStr}`)
       .then((r) => r.json())
       .then((plans: { date: string; menu_text: string | null; schedule_text: string | null }[]) => {
-        mealDone = true;
-        updateProgress();
 
         const planMap = new Map<string, { menu_text: string | null; schedule_text: string | null }>();
         for (const plan of plans) {
@@ -78,23 +66,17 @@ export default function MealPlanClient() {
     const memoPromise = fetch("/api/ingredients-memo")
       .then((r) => r.json())
       .then((memo: { memo_text?: string }) => {
-        memoDone = true;
-        updateProgress();
         return memo?.memo_text ?? "";
       });
 
     Promise.all([mealPromise, memoPromise])
       .then(([newDays, freshMemo]) => {
-        setProgress(100);
-        // 少し待ってからデータを表示（プログレスバー100%の表示を見せる）
-        setTimeout(() => {
-          setDays(newDays);
-          setMemoText(freshMemo);
-        }, 200);
+        setDays(newDays);
+        setMemoText(freshMemo);
+        setLoading(false);
       })
       .catch(() => {
-        // エラー時もプログレスを完了させて空のデータで表示
-        setProgress(100);
+        // エラー時は空のデータで表示
         const emptyDays: DayData[] = [];
         for (let i = 0; i <= 30; i++) {
           const date = new Date(today.getTime());
@@ -109,10 +91,9 @@ export default function MealPlanClient() {
             isToday: dateStr === todayStr,
           });
         }
-        setTimeout(() => {
-          setDays(emptyDays);
-          setMemoText("");
-        }, 200);
+        setDays(emptyDays);
+        setMemoText("");
+        setLoading(false);
       });
   }, []);
 
@@ -154,33 +135,14 @@ export default function MealPlanClient() {
     []
   );
 
-  // ローディング中はプログレスバーを表示
-  if (days === null || memoText === null) {
+  // ローディング中はバウンスドットを表示
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center px-6" style={{ minHeight: "calc(100vh - 48px - var(--sat))" }}>
-        <div className="w-full max-w-xs">
-          {/* プログレスバー */}
-          <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
-              style={{
-                width: `${progress}%`,
-                background: "linear-gradient(90deg, #3B5BDB, #5C7CFA, #748FFC)",
-              }}
-            />
-            {/* シマー（光沢）エフェクト */}
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)",
-                animation: "shimmer 1.5s infinite",
-              }}
-            />
-          </div>
-          <p className="text-center text-gray-400 text-xs mt-4">
-            データを読み込んでいます...
-          </p>
+      <div className="flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 48px - var(--sat))" }}>
+        <div className="flex gap-2">
+          <div className="bouncing-dot" style={{ animationDelay: "0s" }} />
+          <div className="bouncing-dot" style={{ animationDelay: "0.15s" }} />
+          <div className="bouncing-dot" style={{ animationDelay: "0.3s" }} />
         </div>
       </div>
     );
@@ -203,7 +165,7 @@ export default function MealPlanClient() {
             saveMemo(text);
           }}
           ref={memoRef}
-          dangerouslySetInnerHTML={{ __html: memoText }}
+          dangerouslySetInnerHTML={{ __html: memoText ?? "" }}
         />
       </div>
 
@@ -216,7 +178,7 @@ export default function MealPlanClient() {
             <col />
           </colgroup>
           <tbody>
-            {days.map((day) => (
+            {(days ?? []).map((day) => (
               <tr
                 key={day.date}
                 className="border border-gray-300"
